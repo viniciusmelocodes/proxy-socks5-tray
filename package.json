@@ -1,0 +1,46 @@
+{
+  "name": "proxy-socks5-tray",
+  "version": "1.0.0",
+  "description": "Proxy SOCKS5 na bandeja do sistema",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "socksv5": "^0.0.6"
+  },
+  "build": {
+    "appId": "com.proxy.socks5",
+    "productName": "Proxy SOCKS5",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "files": [
+      "main.js",
+      "proxy-server.js",
+      "assets/**/*"
+    ]
+  }
+}
