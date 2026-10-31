@@ -56,7 +56,7 @@ class ProxyServer {
       this.server.useAuth(socks.auth.None());
 
       this.server.listen(this.port, this.host, () => {
-        this.log(`🟢 Proxy SOCKS5 ouvindo em ${this.host}:${this.port}`);
+        this.log(`🟢 Proxy SOCKS5 iniciado e ouvindo em ${this.host}:${this.port}`);
         resolve();
       });
 
@@ -74,7 +74,7 @@ class ProxyServer {
       this.connections.clear();
       this.server.close(() => {
         try {
-          this.log('🔴 Proxy parado');
+          this.log('🔴 Proxy SOCKS5 parado');
         } catch (e) {
           // ignora erro de log durante shutdown
         }

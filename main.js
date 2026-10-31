@@ -1,4 +1,5 @@
 const { app, Tray, Menu, BrowserWindow, dialog } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const ProxyServer = require('./proxy-server');
 
@@ -13,6 +14,30 @@ let proxy = null;
 let isRunning = false;
 let mainWindow = null; // janela de logs (opcional)
 let isQuitting = false;
+const logHistory = [];
+let currentLogDate = null;
+let currentLogPath = null;
+
+function getLocalDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function writeDailyLog(message) {
+  const date = getLocalDate();
+
+  if (date !== currentLogDate) {
+    const logDirectory = path.join(app.getPath('userData'), 'logs');
+    fs.mkdirSync(logDirectory, { recursive: true });
+    currentLogDate = date;
+    currentLogPath = path.join(logDirectory, `proxy-${date}.txt`);
+  }
+
+  fs.appendFileSync(currentLogPath, `${message}\n`, 'utf8');
+}
 
 // Cria a janela de logs (invisível por padrão)
 function createLogWindow() {
@@ -38,24 +63,49 @@ function createLogWindow() {
     }
   });
 
-  mainWindow.loadURL(`data:text/html;charset=utf-8,
+  logWindow.webContents.on('did-finish-load', () => {
+    if (!logWindow.isDestroyed()) {
+      logWindow.webContents.send('logs', logHistory);
+    }
+  });
+
+  const logHtml = `
     <html>
       <body style="background:#1e1e1e;color:#0f0;font-family:Consolas,monospace;padding:10px;overflow:auto">
         <pre id="log"></pre>
       </body>
       <script>
         const { ipcRenderer } = require('electron');
+        const logElement = document.getElementById('log');
+
         ipcRenderer.on('log', (_, msg) => {
-          const el = document.getElementById('log');
-          el.textContent += msg + '\\n';
-          el.scrollTop = el.scrollHeight;
+          logElement.textContent += msg + '\\n';
+          logElement.scrollTop = logElement.scrollHeight;
+        });
+
+        ipcRenderer.on('logs', (_, messages) => {
+          logElement.textContent = messages.join('\\n') + (messages.length ? '\\n' : '');
+          logElement.scrollTop = logElement.scrollHeight;
         });
       </script>
     </html>
-  `);
+  `;
+
+  logWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(logHtml)}`);
 }
 
 function sendLog(msg) {
+  logHistory.push(msg);
+  if (logHistory.length > 200) {
+    logHistory.shift();
+  }
+
+  try {
+    writeDailyLog(msg);
+  } catch (err) {
+    console.error(`Falha ao gravar arquivo de log: ${err.message}`);
+  }
+
   // ✅ Verifica se a janela e os webContents ainda existem
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
     mainWindow.webContents.send('log', msg);
